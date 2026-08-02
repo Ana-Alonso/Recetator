@@ -164,7 +164,7 @@ Devuelve las fluctuaciones de precio registradas en la base de datos de producto
 ### 1. Generación de Recetas
 Recetator utiliza un catálogo de más de **16 plantillas culinarias** con ranuras de ingredientes intercambiables. Cada ranura tiene múltiples opciones compatibles por dieta (Omnívora, Vegetariana, Vegana, Pescetariana, Keto, Paleo, Sin Gluten, Sin Lactosa y Mediterránea) y alérgenos.
 
-Antes de proponer una receta al usuario, el generador **consulta la base de datos de Calla y Come (https://github.com/Ana-Alonso/CallayCome)** y descarta automáticamente cualquier nombre que ya exista. Si hay coincidencia, reintenta hasta 8 veces con otras combinaciones de ingredientes hasta generar un plato nuevo.
+Antes de proponer una receta al usuario, el generador **consulta la base de datos de [Calla y Come](https://github.com/Ana-Alonso/CallayCome)** y descarta automáticamente cualquier nombre que ya exista. Si hay coincidencia, reintenta hasta 8 veces con otras combinaciones de ingredientes hasta generar un plato nuevo.
 
 ### 2. Mapeo de Precios en Tiempo Real
 Para cada ingrediente de la receta generada, se busca el producto más ajustado en la base de datos del supermercado (descartando coincidencias falsas mediante scoring de relevancia). Si el usuario tiene el ingrediente en su despensa, se descuenta la cantidad disponible y se calcula el coste neto a comprar.
