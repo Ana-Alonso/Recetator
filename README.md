@@ -14,7 +14,7 @@ Recetator actúa como el cerebro de **Calla y Come**: aprende los gustos de la f
 Recetator/
 ├── src/
 │   ├── backend/
-│   │   ├── server.ts               # Servidor Express con todos los endpoints de la API
+│   │   ├── server.ts               # Servidor Express con Rate Limiting, Helmet y CORS restringido
 │   │   └── ai/
 │   │       ├── neural_network.ts   # Red neuronal MLP implementada desde cero
 │   │       ├── recipe_generator.ts # Motor de generación y planificación semanal
@@ -24,12 +24,17 @@ Recetator/
 │   │   ├── InstructionCard.tsx     # Descripción del funcionamiento de la IA
 │   │   ├── RecipeGeneratorTab.tsx  # Pestaña de generación individual
 │   │   ├── WeeklyPlannerTab.tsx    # Pestaña de planificador semanal
-│   │   └── PriceTrendsTab.tsx      # Pestaña de alertas de precios
+│   │   ├── PriceTrendsTab.tsx      # Pestaña de alertas de precios
+│   │   └── legal/                  # Componente CookieConsent (RGPD)
+│   ├── pages/                      # Páginas legales RGPD (/privacy, /terms, /cookies)
 │   ├── services/
 │   │   ├── supabaseClient.ts       # Cliente de Supabase para Calla y Come
 │   │   └── apiService.ts           # Llamadas HTTP tipadas al backend de la IA
-│   ├── App.tsx                     # Orquestador del estado global
+│   ├── App.tsx                     # Orquestador del estado global con rutas legales
 │   └── index.css                   # Sistema de diseño (Glassmorphism + tema oscuro)
+├── public/
+│   ├── robots.txt                  # Archivo de directivas para buscadores
+│   └── sitemap.xml                 # Mapa del sitio XML
 ├── .env                            # Variables de entorno (Supabase URLs, claves)
 ├── package.json
 ├── vite.config.ts
@@ -38,12 +43,14 @@ Recetator/
 
 ---
 
-## Stack Tecnológico
+## Stack Tecnológico & Seguridad
 
-| Capa | Tecnología |
+| Capa | Tecnología / Medida |
 |---|---|
-| Frontend | React 19 + TypeScript + Vite |
-| Backend | Express + TypeScript + tsx/nodemon |
+| Frontend | React 19 + TypeScript + Vite 8 |
+| Backend | Express + TypeScript + Helmet.js + CORS restringido |
+| Rate Limiting | `express-rate-limit`: 120 req/15min global, 10 req/15min generación menú IA |
+| Cumplimiento RGPD | Banner de consentimiento de cookies local, `/privacy`, `/terms`, `/cookies` |
 | Base de Datos (Recetario) | Supabase (Calla y Come) |
 | Base de Datos (Supermercados) | Supabase (Catálogo de productos) |
 | IA / Red Neuronal | MLP implementado desde cero en TypeScript |
@@ -66,6 +73,7 @@ Crea o edita el archivo `.env` en la raíz del proyecto con las siguientes varia
 
 ```env
 PORT=8002
+FRONTEND_URL=https://recetator.onrender.com
 
 SUPABASE_KITCHEN_URL=https://<tu-proyecto>.supabase.co
 SUPABASE_KITCHEN_ANON_KEY=<anon-key-del-recetario>
@@ -112,9 +120,9 @@ npm start
 
 ---
 
-## API REST — Endpoints
+## API REST — Endpoints Protegidos con Rate Limiting
 
-Todos los endpoints del servidor están disponibles en `http://localhost:8002`.
+Todos los endpoints del servidor están disponibles en `http://localhost:8002` (o URL de Render en producción).
 
 ### `GET /api/ai/status`
 Devuelve el estado actual del modelo neuronal: si está entrenado, número de épocas, pérdida final y número de recetas usadas.
@@ -124,53 +132,15 @@ Devuelve el estado actual del modelo neuronal: si está entrenado, número de é
 ### `POST /api/ai/train`
 Entrena el modelo neuronal con las recetas y votos existentes en la base de datos de Calla y Come.
 
-**Body:**
-```json
-{
-  "epochs": 1000,
-  "learningRate": 0.1
-}
-```
-
 ---
 
 ### `POST /api/ai/generate-recipe`
 Genera una receta nueva que no existe aún en el recetario de la familia, con comparativa de precios entre supermercados.
 
-**Body:**
-```json
-{
-  "meal_type": "comida",
-  "diet_type": "omnivoro",
-  "allergens": ["lactosa"],
-  "max_budget": 5,
-  "supermarket_id": "todos",
-  "health": "saludable",
-  "difficulty": "facil",
-  "pantry_items": [
-    { "nombre": "Arroz", "cantidad": 200, "unidad": "g" }
-  ]
-}
-```
-
 ---
 
-### `POST /api/ai/generate-menu`
+### `POST /api/ai/generate-menu` *(Rate Limit: 10 req / 15 min)*
 Genera un menú semanal completo (21 comidas: desayuno, comida y cena para 7 días) optimizando el presupuesto y garantizando que ningún plato se repita ni exista ya en el recetario.
-
-**Body:**
-```json
-{
-  "weekly_budget": 50,
-  "supermarket_id": "todos",
-  "diet_type": "omnivoro",
-  "allergens": [],
-  "health": "saludable",
-  "difficulty": "facil",
-  "use_pantry": true,
-  "family_id": "uuid-de-la-familia"
-}
-```
 
 ---
 
@@ -180,14 +150,7 @@ Compara el coste de una lista de ingredientes en todos los supermercados disponi
 ---
 
 ### `POST /api/ai/detect-allergens`
-Detecta automáticamente los alérgenos presentes en una lista libre de ingredientes mediante clasificación semántica por palabras clave.
-
-**Body:**
-```json
-{
-  "ingredients": ["harina de trigo", "leche entera", "huevo"]
-}
-```
+Detecta automáticamente los alérgenos presentes en una lista libre de ingredientes mediante clasificación semántica.
 
 ---
 
@@ -214,27 +177,8 @@ Para la planificación de 7 días, se generan **10 candidatos en paralelo** para
 
 ---
 
-## Esquema de Base de Datos (Calla y Come)
+## Privacidad y RGPD
 
-Las recetas generadas por IA se guardan de forma relacional en las siguientes tablas:
-
-| Tabla | Descripción |
-|---|---|
-| `recipes` | Metadatos de la receta: nombre, tipo de comida, dieta, dificultad, salud, precio, instrucciones, alérgenos |
-| `ingredients` | Catálogo maestro de ingredientes por nombre |
-| `recipe_ingredients` | Tabla de relación: une recetas con sus ingredientes (cantidad y unidad) |
-| `pantry` | Despensa de la familia con cantidades disponibles |
-| `recipe_weights` | Votos de la familia sobre recetas (usado para entrenar la red neuronal) |
-
----
-
-## Estándares de Código
-
-Este proyecto sigue la **regla estricta de cero comentarios**: el código se explica únicamente a través de nombres descriptivos y autoexplicativos. Cualquier fragmento que requiera un comentario para entenderse es una señal de refactorización necesaria.
-
-- **Funciones y variables:** `camelCase` descriptivo
-- **Componentes y clases:** `PascalCase`
-- **Sin comentarios inline ni docstrings**
-- **Tipado completo** en todas las firmas de funciones y retornos
-- **Controladores delgados:** las rutas Express solo parsean, delegan y responden
-- **Servicios dedicados:** toda la lógica de red y base de datos en `src/services/`
+- **Cookies**: Consentimiento explicito via `CookieConsent` banner (almacenamiento local, sin rastreo de terceros).
+- **Rutas Legales**: `/privacy`, `/terms`, `/cookies` accesibles directamente.
+- **Seguridad HTTP**: Middleware `helmet` y restricción de orígenes CORS.
