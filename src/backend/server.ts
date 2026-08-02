@@ -1,6 +1,7 @@
 import express from 'express';
 import type { Request, Response } from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import rateLimit from 'express-rate-limit';
@@ -12,7 +13,28 @@ import * as path from 'path';
 dotenv.config();
 
 const app = express();
-app.use(cors());
+
+// ── Seguridad HTTP (helmet) ────────────────────────────────────────────────────
+app.use(helmet());
+
+// ── Configuración de CORS ──────────────────────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL || 'https://recetator.onrender.com'
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Acceso no permitido por política CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 
 // ── Rate Limiting (RGPD / protección de recursos) ───────────────────────────
