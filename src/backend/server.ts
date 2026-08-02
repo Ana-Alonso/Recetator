@@ -298,6 +298,63 @@ app.post('/api/ai/generate-recipe', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * POST /api/ai/vision-recipe
+ * Recibe una lista de ingredientes detectados por foto o cámara (ej: ["huevos", "patatas", "cebolla"])
+ * y genera recetas optimizadas con precios reales de supermercado.
+ */
+app.post('/api/ai/vision-recipe', async (req: Request, res: Response) => {
+  const { detected_items, meal_type, diet_type, supermarket_id } = req.body;
+
+  if (!detected_items || !Array.isArray(detected_items) || detected_items.length === 0) {
+    res.status(400).json({
+      status: 'error',
+      error: 'Se requiere una lista de detected_items (mínimo 1 ingrediente).'
+    });
+    return;
+  }
+
+  try {
+    const pantryItems = detected_items.map((item: string) => ({
+      nombre: String(item).trim(),
+      cantidad: 1,
+      unidad: 'unidad'
+    }));
+
+    const recipe = await generateRecipe(
+      {
+        meal_type: meal_type || 'comida',
+        diet_type: diet_type || 'omnivoro',
+        supermarket_id: supermarket_id || 'todos',
+        pantry_items: pantryItems
+      },
+      supabaseSupermarket,
+      supabaseKitchen
+    );
+
+    if (!recipe) {
+      res.status(404).json({
+        status: 'error',
+        error: 'No se pudo generar una receta adecuada con los ingredientes reconocidos.'
+      });
+      return;
+    }
+
+    res.json({
+      status: 'success',
+      data: {
+        detected_ingredients_count: detected_items.length,
+        recipe
+      }
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      status: 'error',
+      error: err.message || 'Error durante la generación de receta por visión.'
+    });
+  }
+});
+
 
 app.post('/api/supermarkets/compare', async (req: Request, res: Response) => {
   const { ingredients } = req.body; 
