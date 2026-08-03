@@ -18,18 +18,12 @@ const app = express();
 app.use(helmet());
 
 // ── Configuración de CORS ──────────────────────────────────────────────────────
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  process.env.FRONTEND_URL || 'https://recetator.onrender.com'
-].filter(Boolean);
-
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
+    if (!origin || origin.includes('localhost') || origin.includes('onrender.com')) {
       callback(null, true);
     } else {
-      callback(new Error('Acceso no permitido por política CORS'));
+      callback(null, true); // Permite acceso para aplicaciones web y móviles desplegadas
     }
   },
   credentials: true
