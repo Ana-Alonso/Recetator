@@ -58,6 +58,33 @@ const aiMenuLimiter = rateLimit({
 
 app.use(globalLimiter);
 
+// ── Servir archivos estáticos del frontend (dist) y ruta raíz ──────────────
+const distPath = path.resolve('./dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+}
+
+app.get('/', (_req: Request, res: Response) => {
+  const indexPath = path.join(distPath, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    res.status(200).json({
+      status: 'online',
+      service: 'Recetator AI Backend Service',
+      version: '1.0.0',
+      model_trained: isModelTrained,
+      endpoints: {
+        status: '/api/v1/ai/status',
+        detect_allergens: '/api/ai/detect-allergens',
+        generate_recipe: '/api/ai/generate-recipe',
+        generate_menu: '/api/ai/generate-menu',
+        auto_retrain: '/api/ai/auto-retrain'
+      }
+    });
+  }
+});
+
 
 const kitchenUrl = process.env.SUPABASE_KITCHEN_URL || '';
 const kitchenKey = process.env.SUPABASE_KITCHEN_ANON_KEY || '';
