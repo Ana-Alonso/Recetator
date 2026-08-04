@@ -64,7 +64,7 @@ const aiMenuLimiter = rateLimit({
     }
 });
 
-// Límite diario por cuenta/IP: 50 llamadas a IA por día (24h)
+// Límite diario por IP: 50 llamadas a IA por día (24h)
 const dailyAiLimiter = rateLimit({
     windowMs: 24 * 60 * 60 * 1000,
     max: 50,
