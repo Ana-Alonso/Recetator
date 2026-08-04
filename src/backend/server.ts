@@ -78,7 +78,7 @@ const dailyAiLimiter = rateLimit({
 });
 
 app.use(globalLimiter);
-app.use(dailyAiLimiter);
+app.use('/api', dailyAiLimiter);
 
 // ── Servir archivos estáticos del frontend (dist) y ruta raíz ──────────────
 const distPath = path.resolve('./dist');
