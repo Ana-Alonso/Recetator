@@ -31,6 +31,12 @@ app.use(cors({
 
 app.use(express.json());
 
+const skipInternalRequests = (req: Request) => {
+    const expectedKey = process.env.INTERNAL_API_KEY;
+    const providedKey = req.headers['x-internal-key'];
+    return typeof expectedKey === 'string' && typeof providedKey === 'string' && providedKey === expectedKey;
+};
+
 // ── Rate Limiting (RGPD / protección de recursos) ───────────────────────────
 // Límite global: 120 peticiones por IP cada 15 minutos
 const globalLimiter = rateLimit({
@@ -38,6 +44,7 @@ const globalLimiter = rateLimit({
     max: 120,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    skip: skipInternalRequests,
     message: {
         status: 'error',
         error: 'Demasiadas peticiones. Por favor, inténtalo de nuevo en 15 minutos.'
@@ -50,6 +57,7 @@ const aiMenuLimiter = rateLimit({
     max: 10,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    skip: skipInternalRequests,
     message: {
         status: 'error',
         error: 'Has alcanzado el límite de generaciones de menú. Por favor, espera 15 minutos.'
@@ -62,6 +70,7 @@ const dailyAiLimiter = rateLimit({
     max: 50,
     standardHeaders: 'draft-7',
     legacyHeaders: false,
+    skip: skipInternalRequests,
     message: {
         status: 'error',
         error: 'Has alcanzado el límite diario de peticiones a la API (50 llamadas/día por cuenta). Inténtalo de nuevo mañana.'
