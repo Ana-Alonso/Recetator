@@ -56,7 +56,20 @@ const aiMenuLimiter = rateLimit({
     }
 });
 
+// Límite diario por cuenta/IP: 50 llamadas a IA por día (24h)
+const dailyAiLimiter = rateLimit({
+    windowMs: 24 * 60 * 60 * 1000,
+    max: 50,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: {
+        status: 'error',
+        error: 'Has alcanzado el límite diario de peticiones a la API (50 llamadas/día por cuenta). Inténtalo de nuevo mañana.'
+    }
+});
+
 app.use(globalLimiter);
+app.use(dailyAiLimiter);
 
 // ── Servir archivos estáticos del frontend (dist) y ruta raíz ──────────────
 const distPath = path.resolve('./dist');
